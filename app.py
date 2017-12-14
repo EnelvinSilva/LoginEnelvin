@@ -37,7 +37,7 @@ def fonts(filename):
 
 @route('/') # @get('/')
 def login():
-	return template('login.html')
+	return template('login')
 
 def check_login(username, password):
     d = {'enelvin': '123456', 'evinaldina': '654321', 'evandro': '123456'}
