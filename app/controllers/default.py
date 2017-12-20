@@ -1,43 +1,60 @@
 from app import app
-from bottle import template, static_file, request
+from app.models.tables import User
+from bottle import template, static_file, request, redirect
 
 # static routes
 @app.get('/<filename:re:.*\.css>')
 def stylesheets(filename):
-	return static_file(filename, root='static/css')
+	return static_file(filename, root='app/static/css')
 
 @app.get('/<filename:re:.*\.js>')
 def javascripts(filename):
-	return static_file(filename, root='static/js')
+	return static_file(filename, root='app/static/js')
 
 @app.get('/<filename:re:.*\.(jpg|png|gif|ico)>')
 def images(filename):
-	return static_file(filename, root='static/img')
+	return static_file(filename, root='app/static/img')
 
 @app.get('/<filename:re:.*\.(eot|ttf|woff|svg)>')
 def fonts(filename):
-	return static_file(filename, root='static/fonts')
+	return static_file(filename, root='app/static/fonts')
 
 @app.route('/') # @get('/')
 def login():
-	return template('login')
+	return template('login', sucesso=True)
 
 @app.route('/cadastro')
 def cadastro():
-	return template ('cadastro')
+	return template ('cadastro', existe_username=False)
 
 @app.route('/cadastro', method='POST')
-def acao_cadastro():
-	username = app.request.forms.get('username')
-	password = app.request.forms.get('password')
-	insert_user(username,password)
-	return template('verificacao_cadastro', nome=username)
+def acao_cadastro(db):
+	username = request.forms.get('username')
+	password = request.forms.get('password')
+	try:
+		db.query(User).filter(User.username == username).one()
+		existe_username = True
+	except:
+		existe_username = False
+	if not existe_username:
+		new_user = User(username, password)
+		db.add(new_user)
+		return redirect('/usuarios')
+	return template('cadastro', existe_username=True)
 
 @app.route('/', method='POST') # @post('/')
-def acao_login():
-	username = app.request.forms.get('username')
-	password = app.request.forms.get('password')
-	return template('verificacao_login', sucesso=True)
+def acao_login(db):
+	username = request.forms.get('username')
+	password = request.forms.get('password')
+	result = db.query(User).filter((User.username == username) & (User.password == password)).all()
+	if result:
+		return redirect('/usuarios')
+	return template('login', sucesso=False)
+
+@app.route('/usuarios')
+def usuarios(db):
+	usuarios = db.query(User).all()
+	return template('lista_usuarios', usuarios=usuarios)
 
 @app.error(404)
 def error404(error):
